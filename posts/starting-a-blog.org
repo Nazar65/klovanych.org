@@ -1,0 +1,55 @@
+#+TITLE: Starting a blog
+#+DATE: <2024-11-25 Mon>
+#+OPTIONS: toc:nil num:nil
+#+FILETAGS: :blogging:
+
+I've tried blogging before. All the attempts ended up following a very
+similar pattern: Took me a veeeery long time to write a single post
+and after that I never looked back at it again.
+
+This time I'm trying things differently. I'm not going to start from
+the perfect blog post.
+
+* The home page
+
+  My website is as simple as it can get.
+  
+  The index file is just HTML and CSS, nothing else. Even the list of
+  recent posts is done manually.
+
+* The Posts
+
+  This very post is written as an Org-Mode file. For those who haven't
+  heard of Org-Mode before, checkout [[https://orgmode.org/][their website]].  Long story short,
+  Org-Mode is a text-based document format.  From that perspective, it
+  could be compared with ~Markdown~. The difference is the ginormous
+  feature set that Org-Mode supports compared.  Including, but not
+  limited to, many output formats and an incredible interactive
+  experience. 
+
+  HTML is one of the output formats that Org-Mode supports. Each post
+  written in an ~.org~ file will be translated into an HTML page.
+  This feature is built into Org-Mode. It just takes a bit of
+  configuration.
+  
+* Org-Mode Publishing
+
+  Being completely honest, the HTML publishing feature doesn't seem
+  exactly designed for the blogging use case. It took quite a bit of
+  tweaking of the configuration to get it to do all the things that I
+  wanted.
+
+  Although a single document can be exported to HTML, in order to
+  apply the same configuration to various files, I was required to
+  create a project with a source directory and an output directory.
+
+  The cool thing about this project thing was that I could have
+  different groups of settings and aggregate them all under a single
+  project.
+
+* Operating the blog
+
+  From now one, I just have to execute the command ~C-c C-e P p~ to
+  ask Org Publishing to generate the HTML file of all the org files that
+  have been updated since I last executed it. It feels quite
+  convenient, I have to say.

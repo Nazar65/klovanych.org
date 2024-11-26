@@ -1,0 +1,16 @@
+#+OPTIONS: toc:nil num:nil
+#+TITLE: Hi! I'm Nazar
+
+I'm a human being that deeply enjoys the art of computer
+programming. I'm very curious and interested in various programming
+languages and technologies ranging from web development to systems
+programming and network engineering.
+
+I'm deeply fan of emacs and lisp language, as my daily routine i'm using emacs in all aspects, even
+this article is written and deployed to this website using emacs.
+
+-----
+
+* Links
+  * [[https://github.com/nazar65][GitHub]]
+  * [[mailto:nazarn96@gmail.com][Email]]

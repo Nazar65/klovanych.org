@@ -1,0 +1,20 @@
+{# blog.html --- Blog template; -*- Mode: Jinja2; -*- #}
+{% extends "layout.html" %}
+
+{% block body %}
+  <div class="title">
+    <h1>Blog</h1>
+  </div>
+
+  <div class="content blog">
+    <ul>
+      {% for post in posts %}
+        <li>
+          <a href="{{ url_for("posts", slug=post.slug) }}">
+            {{ post.date|strftime("%b %d, %Y") }}: {{ post.title }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

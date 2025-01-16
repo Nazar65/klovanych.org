@@ -49,6 +49,7 @@
 ;; Output HTML with syntax highlight with css classes instead of
 ;; directly formatting the output.
 (setq org-html-htmlize-output-type 'css)
+(setq org-export-with-broken-links nil)
 
 ;; Static site generation
 (setq weblorg-default-url "https://klovanych.org")

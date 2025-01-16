@@ -1,5 +1,5 @@
 /* Document configurations */
-body                 { padding: 0px; margin: 0px; font-family: monospace, sans-serif; font-size: 16pt;
+body                 { padding: 0px; margin: 0px; font-family: monospace, sans-serif; font-size: 14pt;
                        line-height: 32px; display: flex; flex-direction: column; min-height: 100vh; }
 
 /* Titles */
@@ -16,7 +16,7 @@ a:hover              { color: #fff; }
 hr                   { border-top: 0; border-bottom: solid 1px #3c3836; }
 
 /* Element that wraps everything */
-.container           { width: calc(55% - 100px); padding: 10px 150px; margin: 0 auto; }
+.container           { width: calc(85% - 100px); padding: 10px 150px; margin: 0 auto; }
 
 /* Elements that can appear anywhere */
 .note                { background-color: #504945; padding: 5px 25px; border-radius: 10px; }

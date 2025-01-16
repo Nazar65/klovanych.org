@@ -1,0 +1,196 @@
+#+TITLE: Configuring VPN servers & client on mikrotik devices
+#+DATE: <2025-01-15 Wed>
+#+OPTIONS: toc:nil num:nil
+#+FILETAGS: :blogging:
+
+* Configuring various VPN servers available on mikrotik devices
+
+  So there is few options to configure VPN server on mikrotik devices openVPN, wireguard, L2TP layer protocol.
+  Which one to choose ? lets look close to each one.
+
+** The L2TP protocl and Quicksetup
+
+  #+BEGIN_note
+  *Note*:  this one does not require to have dedicated ip address from your ISP provider
+  #+END_note
+  
+  The easiest one is the L2TP protocol and the QuickSet mode which is available by default when you log in to the web interface.
+  Quickset is a simple configuration wizard page that prepares your router in a few clicks.
+
+  #+ATTR_ORG: :align center
+[[https://klovanych.org/static/img/quickset-vpn.png]]
+
+  
+  This option gives you a domain name where to connect to, and enables PPTP and L2TP/IPsec (the second one is recommended).
+  The username is 'vpn' and you can specify your own password.
+  All you need to do is enable it here, and then provide the address, username and password in your laptop or phone, and
+  when connected to the VPN, you will have a securely encrypted connection to your home network.
+  Also useful when travelling - you will be able to browse the internet through a secure line, as if connecting from your home.
+  This also helps to avoid geographical restrictions that are set up in some countries. 
+
+  
+
+** OpenVPN server using mikrotik router
+
+  The openVPN is performing really slow on mikrotik devices, at least on my RB2011UiAS-RM it was at 50Mb speed max over vpn.
+  OpenVPN is based on TLS/SSL technology, in which a server and clients can verify each other’s identities using certificates.
+
+  #+BEGIN_note
+  *Note*:  You should have an dedicated provider from your ISP to configure openvpn server
+  #+END_note
+
+
+*** So we will start with creating certificates:
+
+1. Certificate Authority (CA) – a master (root) certificate that will be used to sign server and client certificates.
+2. Server – provides the proof of identity for the server and what the OpenVPN daemon runs on.
+4. Client – a private key and public key generated for each new user account. The client has a copy of its private key and the public key that is in the connection profile.
+  
+
+ 1.1  Create the CA key pair:
+ #+BEGIN_SRC bash
+   [admin@MikroTik] > /certificate add name=ca-template \
+                                    common-name=ovpn-ca \
+                                    days-valid=36500 \
+                                    key-size=2048 \
+                                    key-usage=crl-sign,key-cert-sign
+
+   [admin@MikroTik] > /certificate sign ca-template name=ovpn-ca
+ #+END_SRC
+ 
+ 1.2 ─ Create the OpenVPN server key pair and sign with CA ovpn-ca key
+ #+BEGIN_SRC bash
+   [admin@MikroTik] > /certificate add name=server-template \
+                                    common-name=ovpn-server\
+                                    days-valid=36500 \
+                                    key-size=2048 \
+                                    key-usage=digital-signature,key-encipherment,tls-server
+
+   [admin@MikroTik] > /certificate sign server-template name=ovpn-server \
+                                                     ca=ovpn-ca
+ #+END_SRC
+
+ 1.3 Create the OpenVPN client key pair and sign it with the CA key:
+ #+BEGIN_SRC bash
+   [admin@MikroTik] > /certificate add name=client-template \
+                                    common-name=ovpn-client1 \
+                                    days-valid=36500 \
+                                    key-size=2048 \
+                                    key-usage=tls-client
+
+   [admin@MikroTik] >  /certificate sign client-template name=ovpn-client1 \
+                                                      ca=ovpn-ca                                                     ca=ovpn-ca
+ #+END_SRC
+
+ #+BEGIN_note
+*Note*:  For each OpenVPN client we should create an individual key pair to avoid an impact on the other users if one of the private keys is compromised.
+#+END_note
+
+
+*** Configure OpenVPN Server
+
+1. Create a pool of IP addresses for OpenVPN clients:
+   #+BEGIN_SRC bash
+     [admin@MikroTik] > /ip pool add name=ovpn-dhcp-pool \
+                                range=192.168.89.10-192.168.89.254
+   #+END_SRC
+
+2. Configure and start the OpenVPN server:
+   #+BEGIN_SRC bash
+     [admin@MikroTik] > /ppp profile add name=ovpn-server \
+                      use-encryption=yes \
+                      local-address=192.168.89.1 \
+                      dns-server=192.168.89.1 \
+                      remote-address=ovpn-dhcp-pool
+
+     [admin@MikroTik] > /interface ovpn-server server set default-profile=ovpn-server \
+                      certificate=ovpn-server \
+                      require-client-certificate=yes \
+                      auth=sha1 \
+                      cipher=aes128-gcm,aes192-gcm,aes256-gcm \
+                      port=1194 \
+                      enabled=yes
+   #+END_SRC
+   
+*** Configure Firewall
+
+We should create a rules to allow traffic to our openvpn server to the 1194 port, and moved above the DROP rules, otherwise you will get the “Connection reset, restarting [-1]” error while trying to connect to your OpenVPN server.
+the rule named is ";;; defconf: drop all not coming from LAN" we should place our rule above this one.
+
+We will create firewall rules to allow incoming trafic to the VPN server and to allow OpenVPN clients from the 192.168.89.0/24 network to access a LAN (by default, 192.168.88.0/24) and the MikroTik router itself
+
+  #+BEGIN_note
+  *Note*:  place-before number is the number of the rule ";;; defconf: drop all not coming from LAN"
+  #+END_note
+  
+
+#+BEGIN_SRC bash
+  [admin@MikroTik] > /ip firewall filter add chain=input \
+                   action=accept \
+                   protocol=tcp \
+                   dst-port=1194 \
+                   disabled=no \
+                   comment="Allow incoming connections to OpenVPN server" \
+                   place-before=5
+
+  [admin@MikroTik] > /ip firewall filter add chain=input \
+                   action=accept \
+                   src-address=192.168.89.0/24 \
+                   disabled=no \
+                   comment="Allow OpenVPN clients to access MikroTik" \
+                   place-before=6
+
+  [admin@MikroTik] > /ip firewall nat add action=masquerade \
+                   chain=srcnat \
+                   src-address=192.168.89.0/24 \
+                   comment="Allow OpenVPN clients to access LAN"  
+#+END_SRC
+
+After adding those rules all of them should be placed before the ";;; defconf: drop all not coming from LAN"
+
+*** Configure OpenVPN Client
+
+We should download our keys generated in the first step. Copy to the “Files” folder on the MikroTik router from which they can then be downloaded
+
+#+ATTR_ORG: :align center
+[[https://klovanych.org/static/img/mikrotik-files-download.png]]
+
+Download all the keys to your computer or device from wich you would like to connect
+
+*** Create user and set the password at MikroTik router
+
+#+BEGIN_SRC bash
+  [admin@MikroTik] > /ppp secret add name=client-1 profile=ovpn-server password="12345678"
+#+END_SRC
+
+*** Now you can choose any OpenVPN client and try to connect to mikrotik router
+
+If you are using linux we can generate the .ovpn file directly from mikrotik and download it
+
+Login to the mikrotik end excute following command:
+
+  #+BEGIN_note
+  *Note*:  server-address=192.168.89.1 should be the mikrotik public IP address available from internet
+  #+END_note
+
+#+BEGIN_SRC bash
+  [admin@MikroTik] > /interface/ovpn-server/server/export-client-configuration ca-certificate=openvpn-ca.crt \
+                   client-certificate=client1.crt client-cert-key=client1.key server-address=192.168.89.1 
+  server=myServerName
+#+END_SRC
+
+Then download ovpn file and on linux machine with installed openvpn client execute:
+
+#+ATTR_ORG: :align center
+[[https://klovanych.org/static/img/mikrotik-files-download.png]]
+
+
+#+BEGIN_SRC bash
+  :$ openvpn ~/client1728213891.ovpn
+#+END_SRC
+
+
+** Creating WireGuard vpn server and client
+
+  The only options which perfroms good on a mikrotik devices is wireguard server, i was able to achive all 100Mb speed over vpn.
+  with the CPU load around 15-20%

@@ -1,43 +1,47 @@
-#+TITLE: Configuring VPN servers & client on mikrotik devices
+#+TITLE: Configuring VPN servers and clients on Mikrotik routers
 #+DATE: <2025-01-15 Wed>
 #+OPTIONS: toc:nil num:nil
 #+FILETAGS: :blogging:
 
 * Configuring various VPN servers available on mikrotik devices
 
-  So there is few options to configure VPN server on mikrotik devices openVPN, wireguard, L2TP layer protocol.
-  Which one to choose ? lets look close to each one.
+So there is few options to configure VPN server on mikrotik devices openVPN, wireguard, L2TP layer protocol.
+Which one to choose ? lets look close to each one.
 
-** The L2TP protocl and Quicksetup
+** The L2TP protocol and Quicksetup
 
-  #+BEGIN_note
-  *Note*:  this one does not require to have dedicated ip address from your ISP provider
-  #+END_note
+#+BEGIN_note
+*Note*:  this one does not require to have dedicated ip address from your ISP provider
+#+END_note
   
-  The easiest one is the L2TP protocol and the QuickSet mode which is available by default when you log in to the web interface.
-  Quickset is a simple configuration wizard page that prepares your router in a few clicks.
+The easiest one is the L2TP protocol and the QuickSet mode which is available by default when you log in to the web interface.
+Quickset is a simple configuration wizard page that prepares your router in a few clicks.
 
-  #+ATTR_ORG: :align center
+#+ATTR_HTML: :width 100%
 [[https://klovanych.org/static/img/quickset-vpn.png]]
 
   
-  This option gives you a domain name where to connect to, and enables PPTP and L2TP/IPsec (the second one is recommended).
-  The username is 'vpn' and you can specify your own password.
-  All you need to do is enable it here, and then provide the address, username and password in your laptop or phone, and
-  when connected to the VPN, you will have a securely encrypted connection to your home network.
-  Also useful when travelling - you will be able to browse the internet through a secure line, as if connecting from your home.
-  This also helps to avoid geographical restrictions that are set up in some countries. 
+This option gives you a domain name where to connect to, and enables PPTP and L2TP/IPsec (the second one is recommended).
+The username is 'vpn' and you can specify your own password.
+All you need to do is enable it here, and then provide the address, username and password in your laptop or phone, and
+when connected to the VPN, you will have a securely encrypted connection to your home network.
+Also useful when travelling - you will be able to browse the internet through a secure line, as if connecting from your home.
+This also helps to avoid geographical restrictions that are set up in some countries. 
+
+#+BEGIN_note
+*Note*:  If you want to browse mikrotik router and local lan devices using this setup you should setup additional firewall rules described in OpenVPN section of this post
+#+END_note
 
   
 
 ** OpenVPN server using mikrotik router
 
-  The openVPN is performing really slow on mikrotik devices, at least on my RB2011UiAS-RM it was at 50Mb speed max over vpn.
-  OpenVPN is based on TLS/SSL technology, in which a server and clients can verify each other’s identities using certificates.
+The openVPN is performing really slow on mikrotik devices, at least on my RB2011UiAS-RM it was at 50Mb speed max over vpn.
+OpenVPN is based on TLS/SSL technology, in which a server and clients can verify each other’s identities using certificates.
 
-  #+BEGIN_note
-  *Note*:  You should have an dedicated provider from your ISP to configure openvpn server
-  #+END_note
+#+BEGIN_note
+*Note*:  You should have an dedicated ip adress from your ISP provider to configure openvpn server
+#+END_note
 
 
 *** So we will start with creating certificates:
@@ -47,42 +51,42 @@
 4. Client – a private key and public key generated for each new user account. The client has a copy of its private key and the public key that is in the connection profile.
   
 
- 1.1  Create the CA key pair:
- #+BEGIN_SRC bash
-   [admin@MikroTik] > /certificate add name=ca-template \
-                                    common-name=ovpn-ca \
-                                    days-valid=36500 \
-                                    key-size=2048 \
-                                    key-usage=crl-sign,key-cert-sign
+1.1  Create the CA key pair:
+#+BEGIN_SRC bash
+  [admin@MikroTik] > /certificate add name=ca-template \
+                   common-name=ovpn-ca \
+                   days-valid=36500 \
+                   key-size=2048 \
+                   key-usage=crl-sign,key-cert-sign
 
-   [admin@MikroTik] > /certificate sign ca-template name=ovpn-ca
- #+END_SRC
+  [admin@MikroTik] > /certificate sign ca-template name=ovpn-ca
+#+END_SRC
  
- 1.2 ─ Create the OpenVPN server key pair and sign with CA ovpn-ca key
- #+BEGIN_SRC bash
-   [admin@MikroTik] > /certificate add name=server-template \
-                                    common-name=ovpn-server\
-                                    days-valid=36500 \
-                                    key-size=2048 \
-                                    key-usage=digital-signature,key-encipherment,tls-server
+1.2 ─ Create the OpenVPN server key pair and sign with CA ovpn-ca key
+#+BEGIN_SRC bash
+  [admin@MikroTik] > /certificate add name=server-template \
+                   common-name=ovpn-server\
+                   days-valid=36500 \
+                   key-size=2048 \
+                   key-usage=digital-signature,key-encipherment,tls-server
 
-   [admin@MikroTik] > /certificate sign server-template name=ovpn-server \
-                                                     ca=ovpn-ca
- #+END_SRC
+  [admin@MikroTik] > /certificate sign server-template name=ovpn-server \
+                   ca=ovpn-ca
+#+END_SRC
 
- 1.3 Create the OpenVPN client key pair and sign it with the CA key:
- #+BEGIN_SRC bash
-   [admin@MikroTik] > /certificate add name=client-template \
-                                    common-name=ovpn-client1 \
-                                    days-valid=36500 \
-                                    key-size=2048 \
-                                    key-usage=tls-client
+1.3 Create the OpenVPN client key pair and sign it with the CA key:
+#+BEGIN_SRC bash
+  [admin@MikroTik] > /certificate add name=client-template \
+                   common-name=ovpn-client1 \
+                   days-valid=36500 \
+                   key-size=2048 \
+                   key-usage=tls-client
 
-   [admin@MikroTik] >  /certificate sign client-template name=ovpn-client1 \
-                                                      ca=ovpn-ca                                                     ca=ovpn-ca
- #+END_SRC
+  [admin@MikroTik] >  /certificate sign client-template name=ovpn-client1 \
+                   ca=ovpn-ca
+#+END_SRC
 
- #+BEGIN_note
+#+BEGIN_note
 *Note*:  For each OpenVPN client we should create an individual key pair to avoid an impact on the other users if one of the private keys is compromised.
 #+END_note
 
@@ -92,7 +96,7 @@
 1. Create a pool of IP addresses for OpenVPN clients:
    #+BEGIN_SRC bash
      [admin@MikroTik] > /ip pool add name=ovpn-dhcp-pool \
-                                range=192.168.89.10-192.168.89.254
+                      range=192.168.89.10-192.168.89.254
    #+END_SRC
 
 2. Configure and start the OpenVPN server:
@@ -115,13 +119,13 @@
 *** Configure Firewall
 
 We should create a rules to allow traffic to our openvpn server to the 1194 port, and moved above the DROP rules, otherwise you will get the “Connection reset, restarting [-1]” error while trying to connect to your OpenVPN server.
-the rule named is ";;; defconf: drop all not coming from LAN" we should place our rule above this one.
+the rule named is "drop all not coming from LAN" we should place our rule above this one.
 
 We will create firewall rules to allow incoming trafic to the VPN server and to allow OpenVPN clients from the 192.168.89.0/24 network to access a LAN (by default, 192.168.88.0/24) and the MikroTik router itself
 
-  #+BEGIN_note
-  *Note*:  place-before number is the number of the rule ";;; defconf: drop all not coming from LAN"
-  #+END_note
+#+BEGIN_note
+*Note*:  place-before number is the number of the rule "drop all not coming from LAN"
+#+END_note
   
 
 #+BEGIN_SRC bash
@@ -146,13 +150,13 @@ We will create firewall rules to allow incoming trafic to the VPN server and to 
                    comment="Allow OpenVPN clients to access LAN"  
 #+END_SRC
 
-After adding those rules all of them should be placed before the ";;; defconf: drop all not coming from LAN"
+After adding those rules all of them should be placed before the "drop all not coming from LAN"
 
 *** Configure OpenVPN Client
 
 We should download our keys generated in the first step. Copy to the “Files” folder on the MikroTik router from which they can then be downloaded
 
-#+ATTR_ORG: :align center
+#+ATTR_HTML: :width 100%
 [[https://klovanych.org/static/img/mikrotik-files-download.png]]
 
 Download all the keys to your computer or device from wich you would like to connect
@@ -169,19 +173,18 @@ If you are using linux we can generate the .ovpn file directly from mikrotik and
 
 Login to the mikrotik end excute following command:
 
-  #+BEGIN_note
-  *Note*:  server-address=192.168.89.1 should be the mikrotik public IP address available from internet
-  #+END_note
+#+BEGIN_note
+*Note*:  server-address=192.168.89.1 should be the mikrotik public IP address available from internet
+#+END_note
 
 #+BEGIN_SRC bash
   [admin@MikroTik] > /interface/ovpn-server/server/export-client-configuration ca-certificate=openvpn-ca.crt \
-                   client-certificate=client1.crt client-cert-key=client1.key server-address=192.168.89.1 
-  server=myServerName
+                   client-certificate=client1.crt client-cert-key=client1.key server-address=192.168.89.1 server=myServerName
 #+END_SRC
 
 Then download ovpn file and on linux machine with installed openvpn client execute:
 
-#+ATTR_ORG: :align center
+#+ATTR_HTML: :width 100%
 [[https://klovanych.org/static/img/mikrotik-files-download.png]]
 
 
@@ -192,5 +195,149 @@ Then download ovpn file and on linux machine with installed openvpn client execu
 
 ** Creating WireGuard vpn server and client
 
-  The only options which perfroms good on a mikrotik devices is wireguard server, i was able to achive all 100Mb speed over vpn.
-  with the CPU load around 15-20%
+The only options which perfroms good on a mikrotik devices is wireguard server, i was able to achive all 100Mb speed over vpn.
+with the CPU load around 15-20%.
+
+#+BEGIN_note
+*Note*:  We are also asuming that there is an dedicated ip adress from your ISP provider to mikrotik router.
+#+END_note
+
+So first of all we need to do the folowing to setup wiregurad srver on a mikrotik:
+
+Let's start by creating a WireGuard interface on your MikroTik router. I created one called 'wireguard1'. For this setup, I've chosen the IP range 192.168.98.0/24.
+When you create this interface, the router will automatically generate a private and public key pair. It's important to copy the public key here because we'll need this to set up the client.
+
+In WireGuard menu click add new interface, keys will be generated automatically on save.
+
+#+ATTR_HTML: :width 100%
+[[https://klovanych.org/static/img/mikrotik-wiregurard-list.png]]
+
+Then we should assign the ip adress pool for our wireguard interface, which will assign this to vpn users.
+
+We should go tp IP->Adresses new
+
+#+ATTR_HTML: :width 100%
+[[https://klovanych.org/static/img/mikrotik-wireguard-ip-addresses.png]]
+
+Next step is to setup peers for the wireguard interface, WE should paste the public key from your client into this configuration — we'll get this from our client device.
+I'm leaving the Port at its default value of 13231.
+
+Navigate to Wireguard->Peers new
+
+
+#+ATTR_HTML: :width 100%
+[[https://klovanych.org/static/img/mikrotik-wireguard-peers.png]]
+
+#+BEGIN_note
+*Note*:  The 'Allowed Address' can be a bit confusing, but here's what it does. When we set up the client, we need to give it an IP address that’s in the same subnet as our WireGuard interface.
+Since our WireGuard interface is at 192.168.89.1/24, I'm assigning 192.168.89.5 to the client. By adding this IP under 'Allowed Address', we're basically saying that only this specific client (our client in this case) is permitted to connect to this peer configuration.
+#+END_note
+
+At this point we are done with mikrotik configuration, we will come back later to update pulic key for our client peer, once we will get it from client.
+
+** Client Side Configuration linux
+
+I'm using network manager tools available by default from Gnome the package is nmcli i'm assuming you have already installed it.
+
+First of all let's create an vpn.conf file and generate private && public keys
+
+#+BEGIN_SRC bash
+
+  install the wireguard-tools package
+  wg genkey | tee private.key | wg pubkey > public.key
+
+#+END_SRC
+
+Then copy the public key value and save into the Mikrotik server Peer configuration.
+On a Mikrotik go to Wireguard -> Peers client1 and paste the pulic key which we leaced empty in previous steps.
+
+Then cerate the following vpn.conf file
+
+#+BEGIN_SRC conf
+  [Interface]
+  PrivateKey = <contents-of-client-privatekey-generated in command above>
+  Address = 10.0.0.1/24
+  DNS = 8.8.8.8
+  [Peer]
+  PublicKey = <contents-of-server-publickey-generated-on-mikrotik-side>
+  AllowedIPs = 0.0.0.0/0
+  Endpoint = YOUR_PUBLIC_IP_ADDRESS_OF_MIKROTIK
+  PersistentKeepalive = 15
+#+END_SRC
+  
+#+BEGIN_note
+*Note*:  In the publickey line insert the server public key it is the wireguard interface publoc key and on the private key insert the key generated by our wg tools.
+#+END_note
+
+Import configuration file using nmcli command
+
+#+BEGIN_SRC bash
+  nmcli connection import type wireguard file ~/vpn.conf
+#+END_SRC
+
+Then make sure that new connection is set up and running by:
+
+#+BEGIN_SRC bash
+  nmcli connection up vpn
+#+END_SRC
+
+On A mikrotik side you should be able to see traffic comming in by Tx Rx rate in a Peers section of wireguard menu
+
+** Creating Wireguard client on another Mikrotik router
+
+#+BEGIN_note
+*Note*:  We should have already created PEER on a mikrotik wireguard server with where we will put public key from Client mikrotik
+#+END_note
+
+
+On another Mikrotik router we can create a client to connect to the wireguard server on a Mikrotik server so it will be Mikrotik client -> to Mikrotik server.
+
+Lets create the Wireguard interface which will be connected to our Wireguard server on another Mikrotik router.
+Private and public key for interface will be generated automatically.
+
+#+BEGIN_SRC bash
+  [admin@MikroTik] >  /interface wireguard
+  add listen-port=13231 mtu=1420 name=wireguard-MikroTik-Client
+#+END_SRC
+
+Then we should create a new peer containing public key from the mikrotik server peer:
+
+#+BEGIN_SRC bash
+  [admin@MikroTik] > /interface wireguard peers
+      add allowed-address=0.0.0.0/0 endpoint-address=your_miktorik_wireguard_public_ip_address \
+          endpoint-port=13231 \
+          interface=wireguard-MikroTik-Client \
+          persistent-keepalive=10s \
+          public-key="public_key_from_wireguard_server_interface"
+#+END_SRC
+
+
+#+BEGIN_note
+*Note*:  Put the wireguard interface public key from client mikrotik to the server mikrotik wireguard peer 
+#+END_note
+
+Create an ip address pool, for the wireguard interface:
+
+#+BEGIN_SRC bash
+  [admin@MikroTik] >  /ip address
+  add address=192.168.86.2/24 \
+      interface=wireguard-MikroTik-Client \
+      network=192.168.86.0
+#+END_SRC
+
+At the last point we should add the route for the wireguard interface where the gateway is the internal wireguard address, and the dst-address is the subnetwork behind the wireguard on which we should get access.
+
+#+BEGIN_SRC bash
+   [admin@MikroTik] > /ip route add \
+                    disabled=no \
+                    distance=1 \
+                    dst-address=192.168.1.0/24 \
+                    gateway=192.168.86.1 \
+                    pref-src="" \
+                    routing-table=main \
+                    scope=30 \
+                    suppress-hw-offload=no \
+                    target-scope=10
+#+END_SRC
+
+After that we should see the traffic on the Wireguard interface Rx and Tx rate and Last Handshake should change their values, which indicates that traffic is going on them.

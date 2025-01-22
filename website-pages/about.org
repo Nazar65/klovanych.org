@@ -12,5 +12,5 @@ this article is written and deployed to this website using emacs.
 -----
 
 * Links
-  * [[https://github.com/nazar65][GitHub]]
+  * [[https://codeberg.org/klovanych][Codeberg]]
   * [[mailto:nazarn96@gmail.com][Email]]
